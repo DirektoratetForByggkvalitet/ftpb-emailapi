@@ -1,0 +1,22 @@
+pipelines:
+  default:
+      - step:
+          name: Build and Test
+          image: mcr.microsoft.com/dotnet/sdk:5.0
+          caches:
+            - dotnetcore
+          script:            
+            - dotnet restore Dibk.Ftpb.Api.Email.Service.sln
+            - dotnet build-server shutdown
+            - dotnet build Dibk.Ftpb.Api.Email/Dibk.Ftpb.Api.Email.csproj -c Release -f net5.0 --no-restore
+            - dotnet publishDibk.Ftpb.Api.Email/Dibk.Ftpb.Api.Email.csproj -c Release -f net5.0 -o publish --no-build -v detailed
+          artifacts: 
+            - publish/**            
+            
+      - step:
+          name: Deploy to Octopus
+          image: octopusdeploy/octo:6.17.3-alpine
+          script:
+            - export VERSION=1.0.$BITBUCKET_BUILD_NUMBER
+            - octo pack --basePath=publish --id $BITBUCKET_REPO_SLUG --version $VERSION --outFolder ./out --format zip
+            - octo push --package ./out/$BITBUCKET_REPO_SLUG.$VERSION.zip  --server $OCTOPUS_SERVER --apiKey $OCTOPUS_APIKEY
