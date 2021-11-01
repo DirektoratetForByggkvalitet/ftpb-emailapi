@@ -15,6 +15,7 @@ namespace Dibk.Ftpb.Api.Email.Models
         public string Subject { get; set; }        
         public string Body { get; set; }
         public string HtmlBody { get; set; }
+        public IEnumerable<EmailAttachment> Attachments { get; set; }
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {

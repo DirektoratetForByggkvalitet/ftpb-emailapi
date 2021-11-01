@@ -43,6 +43,15 @@ namespace Dibk.Ftpb.Api.Email.Provider.Office365
             var bb = new BodyBuilder();
             bb.HtmlBody = email.HtmlBody;
             bb.TextBody = email.Body;
+
+            if (email.Attachments?.Count() > 0)
+            {
+                foreach (var attachment in email.Attachments)
+                {
+                    bb.Attachments.Add(attachment.FileName, attachment.Content);
+                }
+            }
+
             message.Body = bb.ToMessageBody();
 
             using (var client = new SmtpClient())
