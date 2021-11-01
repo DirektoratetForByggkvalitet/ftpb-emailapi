@@ -2,6 +2,7 @@
 {
     public class Office365EmailSettings
     {
+        public static string ConfigSection => "Office365Settings";
         public string Username { get; set; }
         public string Password { get; set; }
         public string DefaultFromAddress { get; set; }

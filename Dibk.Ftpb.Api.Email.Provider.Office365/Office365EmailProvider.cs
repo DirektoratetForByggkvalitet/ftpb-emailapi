@@ -1,6 +1,5 @@
 ﻿using Dibk.Ftpb.Api.Email.Interfaces;
 using Dibk.Ftpb.Api.Email.Models;
-using MailKit;
 using MailKit.Net.Smtp;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

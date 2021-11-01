@@ -9,7 +9,7 @@ namespace Dibk.Ftpb.Api.Email.Provider.Office365
         {
             services.AddScoped<Interfaces.IFtpbEmailProvider, Office365EmailProvider>();
             //Add options
-            services.Configure<Office365EmailSettings>(configuration.GetSection("Office365Settings"));
+            services.Configure<Office365EmailSettings>(configuration.GetSection(Office365EmailSettings.ConfigSection));
         }
     }
 }
