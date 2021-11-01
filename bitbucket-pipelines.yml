@@ -8,8 +8,8 @@ pipelines:
           script:            
             - dotnet restore Dibk.Ftpb.Api.Email.Service.sln
             - dotnet build-server shutdown
-            - dotnet build Dibk.Ftpb.Api.Email/Dibk.Ftpb.Api.Email.csproj -c Release -f net5.0 --no-restore
-            - dotnet publishDibk.Ftpb.Api.Email/Dibk.Ftpb.Api.Email.csproj -c Release -f net5.0 -o publish --no-build -v detailed
+            - dotnet build Dibk.Ftpb.Api.Email.Service/Dibk.Ftpb.Api.Email.csproj -c Release -f net5.0 --no-restore
+            - dotnet publish Dibk.Ftpb.Api.Email.Service/Dibk.Ftpb.Api.Email.csproj -c Release -f net5.0 -o publish --no-build -v detailed
           artifacts: 
             - publish/**            
             
