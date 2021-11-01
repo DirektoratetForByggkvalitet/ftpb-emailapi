@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <RootNamespace>Dibk.Ftpb.Email.Api</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="5.0.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Dibk.Ftpb.Api.Email.Interfaces\Dibk.Ftpb.Api.Email.Interfaces.csproj" />
+    <ProjectReference Include="..\Dibk.Ftpb.Api.Email.Models\Dibk.Ftpb.Api.Email.Models.csproj" />
+    <ProjectReference Include="..\Dibk.Ftpb.Api.Email.Provider.Office365\Dibk.Ftpb.Api.Email.Provider.Office365.csproj" />
+    <ProjectReference Include="..\Dibk.Ftpb.Api.Email.Provider.SendGrid\Dibk.Ftpb.Api.Email.Provider.SendGrid.csproj" />
+  </ItemGroup>
+
+
+</Project>
