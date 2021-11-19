@@ -52,14 +52,17 @@ namespace Dibk.Ftpb.Api.Email.Provider.Office365
             }
 
             message.Body = bb.ToMessageBody();
+            _logger.LogDebug("Email message built");
 
             using (var client = new SmtpClient())
             {
-                await client.ConnectAsync("smtp.office365.com", 587, MailKit.Security.SecureSocketOptions.StartTls);
-                await client.AuthenticateAsync(_options.Value.Username, _options.Value.Password);
+                await ConnectToMailServer(client);
+                await AuthenticateWithMailserver(client);
+
                 try
                 {
                     await client.SendAsync(message);
+                    _logger.LogInformation("Email sendt");
                 }
                 catch (Exception e)
                 {
@@ -67,6 +70,34 @@ namespace Dibk.Ftpb.Api.Email.Provider.Office365
                     throw;
                 }
                 await client.DisconnectAsync(true);
+            }
+        }
+
+        private async Task AuthenticateWithMailserver(SmtpClient client)
+        {
+            try
+            {
+                await client.AuthenticateAsync(_options.Value.Username, _options.Value.Password);
+                _logger.LogDebug("Authenticated with mailserver");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical(ex, "Unable to authenticate with mailserver");
+                throw;
+            }
+        }
+
+        private async Task ConnectToMailServer(SmtpClient client)
+        {
+            try
+            {
+                await client.ConnectAsync("smtp.office365.com", 587, MailKit.Security.SecureSocketOptions.StartTls);
+                _logger.LogDebug("Connected to mailserver");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical(ex, "Unable to connect to mail server");
+                throw;
             }
         }
     }

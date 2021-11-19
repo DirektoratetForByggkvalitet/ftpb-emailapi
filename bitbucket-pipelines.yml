@@ -2,14 +2,14 @@ pipelines:
   default:
       - step:
           name: Build and Test
-          image: mcr.microsoft.com/dotnet/sdk:5.0
+          image: mcr.microsoft.com/dotnet/sdk:6.0
           caches:
             - dotnetcore
           script:            
             - dotnet restore Dibk.Ftpb.Api.Email.Service.sln
             - dotnet build-server shutdown
-            - dotnet build Dibk.Ftpb.Api.Email.Service/Dibk.Ftpb.Api.Email.csproj -c Release -f net5.0 --no-restore
-            - dotnet publish Dibk.Ftpb.Api.Email.Service/Dibk.Ftpb.Api.Email.csproj -c Release -f net5.0 -o publish --no-build -v detailed
+            - dotnet build Dibk.Ftpb.Api.Email.Service/Dibk.Ftpb.Api.Email.csproj -c Release -f net6.0 --no-restore
+            - dotnet publish Dibk.Ftpb.Api.Email.Service/Dibk.Ftpb.Api.Email.csproj -c Release -f net6.0 -o publish --no-build -v detailed
           artifacts: 
             - publish/**            
             
