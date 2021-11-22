@@ -1,8 +1,7 @@
 using Dibk.Ftpb.Api.Email.Provider.Office365;
-using Dibk.Ftpb.Api.Email.Provider.SendGrid;
+using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -25,6 +24,7 @@ namespace Dibk.Ftpb.Api.Email
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddApplicationInsightsTelemetry(Configuration.GetValue<string>("ApplicationInsights:InstrumentationKey"));
             services.AddControllers();
             services.AddOffice365EmailProvider(Configuration);
         }
@@ -36,7 +36,7 @@ namespace Dibk.Ftpb.Api.Email
             {
                 app.UseDeveloperExceptionPage();
             }
-            ConfigureLogging(Configuration);
+            ConfigureLogging(app.ApplicationServices);
             app.UseSerilogRequestLogging();
             app.UseHttpsRedirection();
 
@@ -50,12 +50,12 @@ namespace Dibk.Ftpb.Api.Email
             });
         }
 
-        private void ConfigureLogging(IConfiguration configuration)
+        private void ConfigureLogging(IServiceProvider serviceProvider)
         {
-            var elasticSearchUrl = configuration["Serilog:Elasticsearch:Url"];
-            var elasticUsername = configuration["Serilog:Elasticsearch:Username"];
-            var elasticPassword = configuration["Serilog:Elasticsearch:Password"];
-            var elasticIndexFormat = configuration["Serilog:Elasticsearch:IndexFormat"];
+            var elasticSearchUrl = Configuration["Serilog:Elasticsearch:Url"];
+            var elasticUsername = Configuration["Serilog:Elasticsearch:Username"];
+            var elasticPassword = Configuration["Serilog:Elasticsearch:Password"];
+            var elasticIndexFormat = Configuration["Serilog:Elasticsearch:IndexFormat"];
 
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Is(LogEventLevel.Debug)
@@ -65,6 +65,7 @@ namespace Dibk.Ftpb.Api.Email
                 .Enrich.WithCorrelationIdHeader()
                 .WriteTo.Trace(outputTemplate: "{Timestamp:HH:mm:ss.fff} {SourceContext} [{Level}] {Message}{NewLine}{Exception}")
                 .WriteTo.Console()
+                .WriteTo.ApplicationInsights(serviceProvider.GetRequiredService<TelemetryConfiguration>(), TelemetryConverter.Traces)
                 .WriteTo.Elasticsearch(new ElasticsearchSinkOptions(new Uri(elasticSearchUrl))
                 {
                     DetectElasticsearchVersion = true,
