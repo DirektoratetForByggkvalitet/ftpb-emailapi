@@ -25,6 +25,11 @@ namespace Dibk.Ftpb.Api.Email
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddApplicationInsightsTelemetry(Configuration.GetValue<string>("ApplicationInsights:InstrumentationKey"));
+            services.AddLogging(loggingBuilder =>
+            {
+                loggingBuilder.AddSerilog();
+            });
+            services.AddHttpContextAccessor();
             services.AddControllers();
             services.AddOffice365EmailProvider(Configuration);
         }
