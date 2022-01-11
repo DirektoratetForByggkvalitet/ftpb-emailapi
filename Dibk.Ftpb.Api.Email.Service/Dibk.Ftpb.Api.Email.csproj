@@ -24,6 +24,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Dibk.Ftpb.Api.Email.Interfaces\Dibk.Ftpb.Api.Email.Interfaces.csproj" />
     <ProjectReference Include="..\Dibk.Ftpb.Api.Email.Models\Dibk.Ftpb.Api.Email.Models.csproj" />
+    <ProjectReference Include="..\Dibk.Ftpb.Api.Email.Provider.GraphApi\Dibk.Ftpb.Api.Email.Provider.GraphApi.csproj" />
     <ProjectReference Include="..\Dibk.Ftpb.Api.Email.Provider.Office365\Dibk.Ftpb.Api.Email.Provider.Office365.csproj" />
     <ProjectReference Include="..\Dibk.Ftpb.Api.Email.Provider.SendGrid\Dibk.Ftpb.Api.Email.Provider.SendGrid.csproj" />
   </ItemGroup>
