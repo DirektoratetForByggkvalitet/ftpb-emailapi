@@ -20,9 +20,35 @@ namespace Dibk.Ftpb.Api.Email.Provider.GraphApi
         }
         public async Task SendEmail(EmailMessage email)
         {
+            Message message = BuildMessage(email);
+
             GraphServiceClient client = new GraphServiceClient(_clientCredentialsAuthProvider);
+            var saveToSentItems = false;
+            try
+            {
+                await client.Users[_settings.UserPrincipalName]
+                    .SendMail(message, saveToSentItems)
+                    .Request()
+                    .PostAsync();
+                _logger.LogInformation("Email sendt");
+            }
+            catch (Microsoft.Graph.ServiceException svcEx)
+            {
+                var s = svcEx.ToString();
+                var errorMessage =  svcEx.Error.ToString();
 
+                _logger.LogError(svcEx, $"{s} - {errorMessage}");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception occurred when sending message");
+                throw;
+            }
+        }
 
+        private Message BuildMessage(EmailMessage email)
+        {
             var message = new Message();
 
             message.Subject = email.Subject;
@@ -49,12 +75,12 @@ namespace Dibk.Ftpb.Api.Email.Provider.GraphApi
                 var attachments = new MessageAttachmentsCollectionPage();
 
                 foreach (var attachment in email.Attachments)
-                {                    
+                {
                     attachments.Add(new FileAttachment() { ContentBytes = attachment.Content, Name = attachment.FileName });
                 }
 
                 message.Attachments = attachments;
-            }            
+            }
 
             if (email.From == null || string.IsNullOrEmpty(email.From.Address))
                 message.From = new Recipient() { EmailAddress = new Microsoft.Graph.EmailAddress() { Name = _settings.DefaultFromDisplayName, Address = _settings.DefaultFromAddress } };
@@ -65,20 +91,7 @@ namespace Dibk.Ftpb.Api.Email.Provider.GraphApi
 
             _logger.LogDebug("Email message built");
 
-            var saveToSentItems = false;
-            try
-            {
-                await client.Users[_settings.UserPrincipalName]
-                    .SendMail(message, saveToSentItems)
-                    .Request()                    
-                    .PostAsync();
-                _logger.LogInformation("Email sendt");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Exception occurred when sending message");
-                throw;
-            }
+            return message;
         }
     }
 }
