@@ -1,0 +1,80 @@
+﻿using Dibk.Ftpb.Api.Email.Interfaces;
+using Dibk.Ftpb.Api.Email.Models;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Microsoft.Graph;
+
+namespace Dibk.Ftpb.Api.Email.Provider.GraphApi
+{
+    public partial class GraphApiEmailProvider : IFtpbEmailProvider
+    {
+        private readonly ILogger<GraphApiEmailProvider> _logger;
+        private readonly IAuthenticationProvider _clientCredentialsAuthProvider;
+        private readonly GraphApiEmailSettings _settings;
+
+        public GraphApiEmailProvider(ILogger<GraphApiEmailProvider> logger, IAuthenticationProvider clientCredentialsAuthProvider, IOptions<GraphApiEmailSettings> options)
+        {
+            _logger = logger;
+            _clientCredentialsAuthProvider = clientCredentialsAuthProvider;
+            _settings = options.Value;
+        }
+        public async Task SendEmail(EmailMessage email)
+        {
+            GraphServiceClient client = new GraphServiceClient(_clientCredentialsAuthProvider);
+
+
+            var message = new Message();
+
+            message.Subject = email.Subject;
+
+            ItemBody? body = null;
+
+            if (string.IsNullOrEmpty(email.HtmlBody))
+                body = new ItemBody()
+                {
+                    ContentType = BodyType.Text,
+                    Content = email.Body
+                };
+            else
+                body = new ItemBody()
+                {
+                    ContentType = BodyType.Html,
+                    Content = email.HtmlBody
+                };
+
+            message.Body = body;
+
+            if (email.Attachments?.Count() > 0)
+            {
+                foreach (var attachment in email.Attachments)
+                {
+                    message.Attachments.Add(new FileAttachment() { ContentBytes = attachment.Content, Name = attachment.FileName });
+                }
+            }
+
+            if (email.From == null || string.IsNullOrEmpty(email.From.Address))
+                message.From = new Recipient() { EmailAddress = new Microsoft.Graph.EmailAddress() { Name = _settings.DefaultFromDisplayName, Address = _settings.DefaultFromAddress } };
+            else
+                message.From = new Recipient() { EmailAddress = new Microsoft.Graph.EmailAddress() { Name = email.From.DisplayName, Address = email.From.Address } };
+
+            message.ToRecipients = email.To.Select(p => new Recipient() { EmailAddress = new Microsoft.Graph.EmailAddress() { Address = p.Address, Name = p.DisplayName } }).ToList();
+
+            _logger.LogDebug("Email message built");
+
+            var saveToSentItems = false;
+            try
+            {
+                await client.Users[_settings.UserPrincipalName]
+                    .SendMail(message, saveToSentItems)
+                    .Request()
+                    .PostAsync();
+                _logger.LogInformation("Email sendt");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception occurred when sending message");
+                throw;
+            }
+        }
+    }
+}

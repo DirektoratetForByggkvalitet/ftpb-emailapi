@@ -1,3 +1,4 @@
+using Dibk.Ftpb.Api.Email.Provider.GraphApi;
 using Dibk.Ftpb.Api.Email.Provider.Office365;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Builder;
@@ -31,7 +32,8 @@ namespace Dibk.Ftpb.Api.Email
             });
             services.AddHttpContextAccessor();
             services.AddControllers();
-            services.AddOffice365EmailProvider(Configuration);
+            //services.AddOffice365EmailProvider(Configuration);
+            services.AddGraphApiEmailProvider(Configuration);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
