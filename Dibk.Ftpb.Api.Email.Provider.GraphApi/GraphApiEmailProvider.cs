@@ -1,20 +1,25 @@
 ﻿using Dibk.Ftpb.Api.Email.Interfaces;
 using Dibk.Ftpb.Api.Email.Models;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.Graph;
-using Microsoft.Identity.Client;
 
 namespace Dibk.Ftpb.Api.Email.Provider.GraphApi
 {
-    public class GraphApiEmailProvider : IFtpbEmailProvider
+    public partial class GraphApiEmailProvider : IFtpbEmailProvider
     {
+        private readonly ILogger<GraphApiEmailProvider> _logger;
         private readonly IAuthenticationProvider _clientCredentialsAuthProvider;
+        private readonly GraphApiEmailSettings _settings;
 
-        public GraphApiEmailProvider(IAuthenticationProvider clientCredentialsAuthProvider)
+        public GraphApiEmailProvider(ILogger<GraphApiEmailProvider> logger, IAuthenticationProvider clientCredentialsAuthProvider, IOptions<GraphApiEmailSettings> options)
         {
+            _logger = logger;
             _clientCredentialsAuthProvider = clientCredentialsAuthProvider;
+            _settings = options.Value;
         }
         public async Task SendEmail(EmailMessage email)
-        {            
+        {
             GraphServiceClient client = new GraphServiceClient(_clientCredentialsAuthProvider);
 
 
@@ -39,44 +44,37 @@ namespace Dibk.Ftpb.Api.Email.Provider.GraphApi
 
             message.Body = body;
 
-            message.ToRecipients = email.To.Select(p =>  new Recipient() { EmailAddress = new Microsoft.Graph.EmailAddress() { Address = p.Address, Name = p.DisplayName} }).ToList();
-            message.From = new Recipient() { EmailAddress = new Microsoft.Graph.EmailAddress() { Name = "DIBK", Address = "ikkesvar@dibk.no" } };
+            if (email.Attachments?.Count() > 0)
+            {
+                foreach (var attachment in email.Attachments)
+                {
+                    message.Attachments.Add(new FileAttachment() { ContentBytes = attachment.Content, Name = attachment.FileName });
+                }
+            }
+
+            if (email.From == null || string.IsNullOrEmpty(email.From.Address))
+                message.From = new Recipient() { EmailAddress = new Microsoft.Graph.EmailAddress() { Name = _settings.DefaultFromDisplayName, Address = _settings.DefaultFromAddress } };
+            else
+                message.From = new Recipient() { EmailAddress = new Microsoft.Graph.EmailAddress() { Name = email.From.DisplayName, Address = email.From.Address } };
+
+            message.ToRecipients = email.To.Select(p => new Recipient() { EmailAddress = new Microsoft.Graph.EmailAddress() { Address = p.Address, Name = p.DisplayName } }).ToList();
+
+            _logger.LogDebug("Email message built");
+
             var saveToSentItems = false;
-
-            await client.Me
-                .SendMail(message, saveToSentItems)
-                .Request()
-                .PostAsync();
-        }
-    }
-
-    public class ClientCredentialsAuthProvider : IAuthenticationProvider
-    {
-        private readonly string clientId;
-        private readonly string clientSecret;
-        private readonly string[] appScopes;
-        private readonly string tenantId;
-
-        public ClientCredentialsAuthProvider(string clientId, string clientSecret, string[] appScopes, string tenantId)
-        {
-            this.clientId = clientId;
-            this.clientSecret = clientSecret;
-            this.appScopes = appScopes;
-            this.tenantId = tenantId;
-        }
-
-        public async Task AuthenticateRequestAsync(HttpRequestMessage request)
-        {
-            var clientApplication = ConfidentialClientApplicationBuilder.Create(this.clientId)
-                .WithClientSecret(this.clientSecret)
-                .WithClientId(this.clientId)
-                .WithTenantId(this.tenantId)
-                .Build();
-
-            var result = await clientApplication.AcquireTokenForClient(this.appScopes).ExecuteAsync();
-            var h = result.CreateAuthorizationHeader();
-            request.Headers.Remove("Authorization");            
-            request.Headers.Add("Authorization", result.CreateAuthorizationHeader());
+            try
+            {
+                await client.Users[_settings.UserPrincipalName]
+                    .SendMail(message, saveToSentItems)
+                    .Request()
+                    .PostAsync();
+                _logger.LogInformation("Email sendt");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception occurred when sending message");
+                throw;
+            }
         }
     }
 }
