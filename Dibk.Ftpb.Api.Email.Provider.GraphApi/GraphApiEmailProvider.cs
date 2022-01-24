@@ -46,11 +46,15 @@ namespace Dibk.Ftpb.Api.Email.Provider.GraphApi
 
             if (email.Attachments?.Count() > 0)
             {
+                var attachments = new MessageAttachmentsCollectionPage();
+
                 foreach (var attachment in email.Attachments)
-                {
-                    message.Attachments.Add(new FileAttachment() { ContentBytes = attachment.Content, Name = attachment.FileName });
+                {                    
+                    attachments.Add(new FileAttachment() { ContentBytes = attachment.Content, Name = attachment.FileName });
                 }
-            }
+
+                message.Attachments = attachments;
+            }            
 
             if (email.From == null || string.IsNullOrEmpty(email.From.Address))
                 message.From = new Recipient() { EmailAddress = new Microsoft.Graph.EmailAddress() { Name = _settings.DefaultFromDisplayName, Address = _settings.DefaultFromAddress } };
@@ -66,7 +70,7 @@ namespace Dibk.Ftpb.Api.Email.Provider.GraphApi
             {
                 await client.Users[_settings.UserPrincipalName]
                     .SendMail(message, saveToSentItems)
-                    .Request()
+                    .Request()                    
                     .PostAsync();
                 _logger.LogInformation("Email sendt");
             }
