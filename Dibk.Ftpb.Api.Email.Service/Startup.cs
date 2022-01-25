@@ -32,8 +32,16 @@ namespace Dibk.Ftpb.Api.Email
             });
             services.AddHttpContextAccessor();
             services.AddControllers();
-            //services.AddOffice365EmailProvider(Configuration);
-            services.AddGraphApiEmailProvider(Configuration);
+
+            var emailProvider = Configuration["EmailProvider"];
+
+            if (emailProvider.Equals("GraphApi", StringComparison.OrdinalIgnoreCase))
+                services.AddGraphApiEmailProvider(Configuration);
+            else if (emailProvider.Equals("Office365", StringComparison.OrdinalIgnoreCase))
+                services.AddOffice365EmailProvider(Configuration);
+            else
+                throw new Exception($"Unable to configure email provider for setting {emailProvider}");
+
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
