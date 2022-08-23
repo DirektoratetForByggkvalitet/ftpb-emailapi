@@ -87,7 +87,8 @@ namespace Dibk.Ftpb.Api.Email
                     AutoRegisterTemplateVersion = AutoRegisterTemplateVersion.ESv7,
                     AutoRegisterTemplate = true,
                     ModifyConnectionSettings = x => x.BasicAuthentication(elasticUsername, elasticPassword),
-                    IndexFormat = elasticIndexFormat
+                    IndexFormat = elasticIndexFormat,
+                    TypeName = null
                 }).CreateLogger();
         }
     }
