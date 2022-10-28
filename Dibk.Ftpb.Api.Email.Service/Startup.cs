@@ -69,7 +69,7 @@ namespace Dibk.Ftpb.Api.Email
 
         private void ConfigureLogging(IServiceProvider serviceProvider)
         {
-            var elasticSearchUrl = Configuration["Serilog:Url"];
+            var elasticSearchUrl = Configuration["Serilog:ConnectionUrl"];
             var elasticUsername = Configuration["Serilog:Username"];
             var elasticPassword = Configuration["Serilog:Password"];
             var elasticIndexFormat = Configuration["Serilog:IndexFormat"];
