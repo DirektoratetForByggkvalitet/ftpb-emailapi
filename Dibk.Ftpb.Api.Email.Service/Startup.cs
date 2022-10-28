@@ -67,10 +67,10 @@ namespace Dibk.Ftpb.Api.Email
 
         private void ConfigureLogging(IServiceProvider serviceProvider)
         {
-            var elasticSearchUrl = Configuration["Serilog:Elasticsearch:Url"];
-            var elasticUsername = Configuration["Serilog:Elasticsearch:Username"];
-            var elasticPassword = Configuration["Serilog:Elasticsearch:Password"];
-            var elasticIndexFormat = Configuration["Serilog:Elasticsearch:IndexFormat"];
+            var elasticSearchUrl = Configuration["Serilog:Url"];
+            var elasticUsername = Configuration["Serilog:Username"];
+            var elasticPassword = Configuration["Serilog:Password"];
+            var elasticIndexFormat = Configuration["Serilog:IndexFormat"];
 
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Is(LogEventLevel.Debug)
