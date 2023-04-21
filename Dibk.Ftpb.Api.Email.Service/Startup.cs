@@ -1,5 +1,6 @@
 using Dibk.Ftpb.Api.Email.Provider.GraphApi;
 using Dibk.Ftpb.Api.Email.Provider.Office365;
+using Elastic.Apm.NetCoreAll;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -56,6 +57,7 @@ namespace Dibk.Ftpb.Api.Email
             app.UseSerilogRequestLogging();
             app.UseHttpsRedirection();
 
+            app.UseAllElasticApm(Configuration);
             app.UseRouting();
 
             app.UseAuthorization();
