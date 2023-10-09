@@ -3,22 +3,22 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31919.166
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dibk.Ftpb.Api.Email", "Dibk.Ftpb.Api.Email.Service\Dibk.Ftpb.Api.Email.csproj", "{BDD97A49-41DF-4CCC-8B20-E26DF39CEA06}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dibk.Ftpb.Api.Email", "src\Dibk.Ftpb.Api.Email.Service\Dibk.Ftpb.Api.Email.csproj", "{BDD97A49-41DF-4CCC-8B20-E26DF39CEA06}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dibk.Ftpb.Api.Email.Provider.SendGrid", "Dibk.Ftpb.Api.Email.Provider.SendGrid\Dibk.Ftpb.Api.Email.Provider.SendGrid.csproj", "{1224C272-483B-497D-A7E8-A1A78D50EE5A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dibk.Ftpb.Api.Email.Provider.SendGrid", "src\Dibk.Ftpb.Api.Email.Provider.SendGrid\Dibk.Ftpb.Api.Email.Provider.SendGrid.csproj", "{1224C272-483B-497D-A7E8-A1A78D50EE5A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dibk.Ftpb.Api.Email.Provider.Office365", "Dibk.Ftpb.Api.Email.Provider.Office365\Dibk.Ftpb.Api.Email.Provider.Office365.csproj", "{AA5C8A9A-FAA9-4CCD-A365-DC688C101245}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dibk.Ftpb.Api.Email.Provider.Office365", "src\Dibk.Ftpb.Api.Email.Provider.Office365\Dibk.Ftpb.Api.Email.Provider.Office365.csproj", "{AA5C8A9A-FAA9-4CCD-A365-DC688C101245}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dibk.Ftpb.Api.Email.Models", "Dibk.Ftpb.Api.Email.Models\Dibk.Ftpb.Api.Email.Models.csproj", "{683447A7-3A18-4CF4-BC60-1464A3492CA7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dibk.Ftpb.Api.Email.Models", "src\Dibk.Ftpb.Api.Email.Models\Dibk.Ftpb.Api.Email.Models.csproj", "{683447A7-3A18-4CF4-BC60-1464A3492CA7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dibk.Ftpb.Api.Email.Interfaces", "Dibk.Ftpb.Api.Email.Interfaces\Dibk.Ftpb.Api.Email.Interfaces.csproj", "{5C04EAD3-744A-4D6E-8906-607CF75F01D8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dibk.Ftpb.Api.Email.Interfaces", "src\Dibk.Ftpb.Api.Email.Interfaces\Dibk.Ftpb.Api.Email.Interfaces.csproj", "{5C04EAD3-744A-4D6E-8906-607CF75F01D8}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{E4675F6B-82A1-4368-909D-1747085BCA3F}"
 	ProjectSection(SolutionItems) = preProject
 		README.md = README.md
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dibk.Ftpb.Api.Email.Provider.GraphApi", "Dibk.Ftpb.Api.Email.Provider.GraphApi\Dibk.Ftpb.Api.Email.Provider.GraphApi.csproj", "{7000FB83-9258-47D3-87DC-6F737C349D38}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dibk.Ftpb.Api.Email.Provider.GraphApi", "src\Dibk.Ftpb.Api.Email.Provider.GraphApi\Dibk.Ftpb.Api.Email.Provider.GraphApi.csproj", "{7000FB83-9258-47D3-87DC-6F737C349D38}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
