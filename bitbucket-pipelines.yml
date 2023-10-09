@@ -7,8 +7,8 @@ definitions:
         script:            
           - dotnet restore Dibk.Ftpb.Api.Email.Service.sln
           - dotnet build-server shutdown
-          - dotnet build Dibk.Ftpb.Api.Email.Service/Dibk.Ftpb.Api.Email.csproj -c Release -f net6.0 --no-restore
-          - dotnet publish Dibk.Ftpb.Api.Email.Service/Dibk.Ftpb.Api.Email.csproj -c Release -f net6.0 -o publish --no-build -v detailed          
+          - dotnet build src/Dibk.Ftpb.Api.Email.Service/Dibk.Ftpb.Api.Email.csproj -c Release -f net6.0 --no-restore
+          - dotnet publish src/Dibk.Ftpb.Api.Email.Service/Dibk.Ftpb.Api.Email.csproj -c Release -f net6.0 -o publish --no-build -v detailed          
         artifacts: 
           - publish/**
 
@@ -22,6 +22,8 @@ pipelines:
           image: octopusdeploy/octo:6.17.3-alpine
           script:
             - export VERSION=1.0.$BITBUCKET_BUILD_NUMBER
+            - octo pack --basePath=infrastructure --id $BITBUCKET_REPO_SLUG-infrastructure --version $VERSION --outFolder ./infra --format zip
+            - octo push --package ./infra/$BITBUCKET_REPO_SLUG-infrastructure.$VERSION.zip  --server $OCTOPUS_SERVER --apiKey $OCTOPUS_APIKEY
             - octo pack --basePath=publish --id $BITBUCKET_REPO_SLUG --version $VERSION --outFolder ./out --format zip
             - octo push --package ./out/$BITBUCKET_REPO_SLUG.$VERSION.zip  --server $OCTOPUS_SERVER --apiKey $OCTOPUS_APIKEY
             
