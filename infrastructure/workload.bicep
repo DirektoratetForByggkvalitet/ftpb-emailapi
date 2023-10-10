@@ -6,6 +6,8 @@ param privateDnsZoneName string
 param vnetName string
 param subnetName string
 param connectivitySubnet string
+param stackVersion string
+param startCommand string
 
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2021-01-15' existing = {
@@ -26,8 +28,8 @@ resource AppServiceApp 'Microsoft.Web/sites@2021-01-15' = {
     clientAffinityEnabled: false
     virtualNetworkSubnetId: resourceId(rgSharedResources,'Microsoft.Network/virtualNetworks/subnets', vnetName, connectivitySubnet)
     siteConfig: {
-      linuxFxVersion: 'NODE|18-lts'
-      appCommandLine: 'npx serve -s'
+      linuxFxVersion: stackVersion
+      appCommandLine: startCommand
       appSettings: [
         {
           name: 'WEBSITE_WEBDEPLOY_USE_SCM'
@@ -39,7 +41,6 @@ resource AppServiceApp 'Microsoft.Web/sites@2021-01-15' = {
         }
       ]
     }
-    
   }
 }
 
