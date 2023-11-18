@@ -1,7 +1,6 @@
 using Dibk.Ftpb.Api.Email.Provider.GraphApi;
 using Dibk.Ftpb.Api.Email.Provider.Office365;
 using Elastic.Apm.NetCoreAll;
-using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -27,7 +26,7 @@ namespace Dibk.Ftpb.Api.Email
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddHealthChecks();
-            services.AddApplicationInsightsTelemetry(Configuration.GetValue<string>("ApplicationInsights:InstrumentationKey"));
+
             services.AddLogging(loggingBuilder =>
             {
                 loggingBuilder.AddSerilog();
@@ -43,7 +42,6 @@ namespace Dibk.Ftpb.Api.Email
                 services.AddOffice365EmailProvider(Configuration);
             else
                 throw new Exception($"Unable to configure email provider for setting {emailProvider}");
-
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -79,12 +77,12 @@ namespace Dibk.Ftpb.Api.Email
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Is(LogEventLevel.Debug)
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+                .MinimumLevel.Override("Elastic.Apm", LogEventLevel.Warning)
                 .Enrich.FromLogContext()
                 .Enrich.WithMachineName()
                 .Enrich.WithCorrelationIdHeader()
                 .WriteTo.Trace(outputTemplate: "{Timestamp:HH:mm:ss.fff} {SourceContext} [{Level}] {Message}{NewLine}{Exception}")
                 .WriteTo.Console()
-                .WriteTo.ApplicationInsights(serviceProvider.GetRequiredService<TelemetryConfiguration>(), TelemetryConverter.Traces)
                 .WriteTo.Elasticsearch(new ElasticsearchSinkOptions(new Uri(elasticSearchUrl))
                 {
                     DetectElasticsearchVersion = true,
