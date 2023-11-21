@@ -18,6 +18,7 @@ namespace Dibk.Ftpb.Api.Email.Provider.GraphApi
             _clientCredentialsAuthProvider = clientCredentialsAuthProvider;
             _settings = options.Value;
         }
+
         public async Task SendEmail(EmailMessage email)
         {
             Message message = BuildMessage(email);
@@ -35,7 +36,7 @@ namespace Dibk.Ftpb.Api.Email.Provider.GraphApi
             catch (Microsoft.Graph.ServiceException svcEx)
             {
                 var s = svcEx.ToString();
-                var errorMessage =  svcEx.Error.ToString();
+                var errorMessage = svcEx.Error.ToString();
 
                 _logger.LogError(svcEx, $"{s} - {errorMessage}");
                 throw;
