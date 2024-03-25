@@ -1,6 +1,8 @@
 using Dibk.Ftpb.Api.Email.Provider.GraphApi;
 using Dibk.Ftpb.Api.Email.Provider.Office365;
 using Elastic.Apm.NetCoreAll;
+using Elastic.Serilog.Sinks;
+using Elastic.Transport;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -8,7 +10,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Events;
-using Serilog.Sinks.Elasticsearch;
 using System;
 
 namespace Dibk.Ftpb.Api.Email
@@ -75,7 +76,7 @@ namespace Dibk.Ftpb.Api.Email
             var elasticPassword = Configuration["Serilog:Password"];
             var elasticIndexFormat = Configuration["Serilog:IndexFormat"];
 
-            Log.Logger = new LoggerConfiguration()
+            var config = new LoggerConfiguration()
                 .MinimumLevel.Is(LogEventLevel.Debug)
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
                 .MinimumLevel.Override("Elastic.Apm", LogEventLevel.Warning)
@@ -83,16 +84,16 @@ namespace Dibk.Ftpb.Api.Email
                 .Enrich.WithMachineName()
                 .Enrich.WithCorrelationIdHeader()
                 .WriteTo.Trace(outputTemplate: "{Timestamp:HH:mm:ss.fff} {SourceContext} [{Level}] {Message}{NewLine}{Exception}")
-                .WriteTo.Console()
-                .WriteTo.Elasticsearch(new ElasticsearchSinkOptions(new Uri(elasticSearchUrl))
-                {
-                    DetectElasticsearchVersion = true,
-                    AutoRegisterTemplateVersion = AutoRegisterTemplateVersion.ESv7,
-                    AutoRegisterTemplate = true,
-                    ModifyConnectionSettings = x => x.BasicAuthentication(elasticUsername, elasticPassword),
-                    IndexFormat = elasticIndexFormat,
-                    TypeName = null
-                }).CreateLogger();
+                .WriteTo.Console();
+
+            if (!string.IsNullOrEmpty(elasticSearchUrl))
+                config.WriteTo.Elasticsearch(new Uri[] { new Uri(elasticSearchUrl) },
+                                   opts => { opts.DataStream = new Elastic.Ingest.Elasticsearch.DataStreams.DataStreamName(elasticIndexFormat); },
+                                   tr => { tr.Authentication(new BasicAuthentication(elasticUsername, elasticPassword)); });
+            else
+                Console.WriteLine("ERROR IN SERILOG CONFIGURATION - Unable to register elastic sink. URL is missing in config");
+
+            Log.Logger = config.CreateLogger();
         }
     }
 }
