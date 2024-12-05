@@ -1,12 +1,11 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Dibk.Ftpb.Api.Email.Models
+namespace Dibk.Ftpb.Api.Email.Models;
+
+public class EmailAddress
 {
-    public class EmailAddress
-    {
-        [Required]
-        [EmailAddress]
-        public string Address { get; set; }
-        public string DisplayName { get; set; }
-    }
+    [Required]
+    [EmailAddress]
+    public string Address { get; set; }
+    public string DisplayName { get; set; }
 }

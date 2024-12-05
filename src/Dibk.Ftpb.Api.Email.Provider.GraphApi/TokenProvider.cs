@@ -1,31 +1,30 @@
 ﻿using Microsoft.Identity.Client;
 
-namespace Dibk.Ftpb.Api.Email.Provider.GraphApi
+namespace Dibk.Ftpb.Api.Email.Provider.GraphApi;
+
+public class TokenProvider
 {
-    public class TokenProvider
+    private readonly string clientId;
+    private readonly string clientSecret;
+    private readonly string[] appScopes;
+    private readonly string tenantId;
+
+    public TokenProvider(string clientId, string clientSecret, string[] appScopes, string tenantId)
     {
-        private readonly string clientId;
-        private readonly string clientSecret;
-        private readonly string[] appScopes;
-        private readonly string tenantId;
+        this.clientId = clientId;
+        this.clientSecret = clientSecret;
+        this.appScopes = appScopes;
+        this.tenantId = tenantId;
+    }
 
-        public TokenProvider(string clientId, string clientSecret, string[] appScopes, string tenantId)
-        {
-            this.clientId = clientId;
-            this.clientSecret = clientSecret;
-            this.appScopes = appScopes;
-            this.tenantId = tenantId;
-        }
+    public async Task<AuthenticationResult?> AcquireToken()
+    {
+        var clientApplication = ConfidentialClientApplicationBuilder.Create(this.clientId)
+            .WithClientSecret(this.clientSecret)
+            .WithClientId(this.clientId)
+            .WithTenantId(this.tenantId)
+            .Build();
 
-        public async Task<AuthenticationResult?> AcquireToken()
-        {
-            var clientApplication = ConfidentialClientApplicationBuilder.Create(this.clientId)
-                .WithClientSecret(this.clientSecret)
-                .WithClientId(this.clientId)
-                .WithTenantId(this.tenantId)
-                .Build();
-
-            return await clientApplication.AcquireTokenForClient(this.appScopes).ExecuteAsync();
-        }
+        return await clientApplication.AcquireTokenForClient(this.appScopes).ExecuteAsync();
     }
 }
