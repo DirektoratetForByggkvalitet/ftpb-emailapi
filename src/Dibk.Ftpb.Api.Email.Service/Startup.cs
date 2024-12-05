@@ -1,5 +1,4 @@
 using Dibk.Ftpb.Api.Email.Provider.GraphApi;
-using Dibk.Ftpb.Api.Email.Provider.Office365;
 using Elastic.Apm.NetCoreAll;
 using Elastic.Serilog.Sinks;
 using Elastic.Transport;
@@ -36,14 +35,7 @@ namespace Dibk.Ftpb.Api.Email
             services.AddHttpContextAccessor();
             services.AddControllers();
 
-            var emailProvider = Configuration["EmailProvider"];
-
-            if (emailProvider.Equals("GraphApi", StringComparison.OrdinalIgnoreCase))
-                services.AddGraphApiEmailProvider(Configuration);
-            else if (emailProvider.Equals("Office365", StringComparison.OrdinalIgnoreCase))
-                services.AddOffice365EmailProvider(Configuration);
-            else
-                throw new Exception($"Unable to configure email provider for setting {emailProvider}");
+            services.AddGraphApiEmailProvider(Configuration);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

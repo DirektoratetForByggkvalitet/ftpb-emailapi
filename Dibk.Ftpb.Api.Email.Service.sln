@@ -1,13 +1,8 @@
-﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31919.166
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dibk.Ftpb.Api.Email", "src\Dibk.Ftpb.Api.Email.Service\Dibk.Ftpb.Api.Email.csproj", "{BDD97A49-41DF-4CCC-8B20-E26DF39CEA06}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dibk.Ftpb.Api.Email.Provider.SendGrid", "src\Dibk.Ftpb.Api.Email.Provider.SendGrid\Dibk.Ftpb.Api.Email.Provider.SendGrid.csproj", "{1224C272-483B-497D-A7E8-A1A78D50EE5A}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dibk.Ftpb.Api.Email.Provider.Office365", "src\Dibk.Ftpb.Api.Email.Provider.Office365\Dibk.Ftpb.Api.Email.Provider.Office365.csproj", "{AA5C8A9A-FAA9-4CCD-A365-DC688C101245}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dibk.Ftpb.Api.Email.Models", "src\Dibk.Ftpb.Api.Email.Models\Dibk.Ftpb.Api.Email.Models.csproj", "{683447A7-3A18-4CF4-BC60-1464A3492CA7}"
 EndProject
@@ -18,7 +13,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		README.md = README.md
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dibk.Ftpb.Api.Email.Provider.GraphApi", "src\Dibk.Ftpb.Api.Email.Provider.GraphApi\Dibk.Ftpb.Api.Email.Provider.GraphApi.csproj", "{7000FB83-9258-47D3-87DC-6F737C349D38}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dibk.Ftpb.Api.Email.Provider.GraphApi", "src\Dibk.Ftpb.Api.Email.Provider.GraphApi\Dibk.Ftpb.Api.Email.Provider.GraphApi.csproj", "{7000FB83-9258-47D3-87DC-6F737C349D38}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -30,14 +25,6 @@ Global
 		{BDD97A49-41DF-4CCC-8B20-E26DF39CEA06}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BDD97A49-41DF-4CCC-8B20-E26DF39CEA06}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BDD97A49-41DF-4CCC-8B20-E26DF39CEA06}.Release|Any CPU.Build.0 = Release|Any CPU
-		{1224C272-483B-497D-A7E8-A1A78D50EE5A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{1224C272-483B-497D-A7E8-A1A78D50EE5A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{1224C272-483B-497D-A7E8-A1A78D50EE5A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{1224C272-483B-497D-A7E8-A1A78D50EE5A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{AA5C8A9A-FAA9-4CCD-A365-DC688C101245}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{AA5C8A9A-FAA9-4CCD-A365-DC688C101245}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{AA5C8A9A-FAA9-4CCD-A365-DC688C101245}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{AA5C8A9A-FAA9-4CCD-A365-DC688C101245}.Release|Any CPU.Build.0 = Release|Any CPU
 		{683447A7-3A18-4CF4-BC60-1464A3492CA7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{683447A7-3A18-4CF4-BC60-1464A3492CA7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{683447A7-3A18-4CF4-BC60-1464A3492CA7}.Release|Any CPU.ActiveCfg = Release|Any CPU
