@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Graph;
+using Microsoft.Kiota.Abstractions.Authentication;
 using static Dibk.Ftpb.Api.Email.Provider.GraphApi.GraphApiEmailProvider;
 
 namespace Dibk.Ftpb.Api.Email.Provider.GraphApi

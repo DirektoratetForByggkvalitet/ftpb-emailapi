@@ -3,6 +3,9 @@ using Dibk.Ftpb.Api.Email.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Graph;
+using Microsoft.Graph.Models;
+using Microsoft.Graph.Users.Item.SendMail;
+using Microsoft.Kiota.Abstractions.Authentication;
 
 namespace Dibk.Ftpb.Api.Email.Provider.GraphApi
 {
@@ -12,7 +15,7 @@ namespace Dibk.Ftpb.Api.Email.Provider.GraphApi
         private readonly IAuthenticationProvider _clientCredentialsAuthProvider;
         private readonly GraphApiEmailSettings _settings;
 
-        public GraphApiEmailProvider(ILogger<GraphApiEmailProvider> logger, IAuthenticationProvider clientCredentialsAuthProvider, IOptions<GraphApiEmailSettings> options)
+        public GraphApiEmailProvider(ILogger<GraphApiEmailProvider> logger, IOptions<GraphApiEmailSettings> options, IAuthenticationProvider clientCredentialsAuthProvider)
         {
             _logger = logger;
             _clientCredentialsAuthProvider = clientCredentialsAuthProvider;
@@ -27,20 +30,24 @@ namespace Dibk.Ftpb.Api.Email.Provider.GraphApi
             var saveToSentItems = false;
             try
             {
+                var requestBody = new SendMailPostRequestBody()
+                {
+                    Message = message,
+                    SaveToSentItems = saveToSentItems
+                };
+
                 await client.Users[_settings.UserPrincipalName]
-                    .SendMail(message, saveToSentItems)
-                    .Request()
-                    .PostAsync();
+                    .SendMail.PostAsync(requestBody);
                 _logger.LogInformation("Email sendt");
             }
-            catch (Microsoft.Graph.ServiceException svcEx)
-            {
-                var s = svcEx.ToString();
-                var errorMessage = svcEx.Error.ToString();
+            //catch (Microsoft.Graph.ServiceException svcEx)
+            //{
+            //    var s = svcEx.ToString();
+            //    var errorMessage = svcEx.Error.ToString();
 
-                _logger.LogError(svcEx, $"{s} - {errorMessage}");
-                throw;
-            }
+            //    _logger.LogError(svcEx, $"{s} - {errorMessage}");
+            //    throw;
+            //}
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Exception occurred when sending message");
@@ -73,7 +80,7 @@ namespace Dibk.Ftpb.Api.Email.Provider.GraphApi
 
             if (email.Attachments?.Count() > 0)
             {
-                var attachments = new MessageAttachmentsCollectionPage();
+                var attachments = new List<Attachment>();
 
                 foreach (var attachment in email.Attachments)
                 {
@@ -84,11 +91,11 @@ namespace Dibk.Ftpb.Api.Email.Provider.GraphApi
             }
 
             if (email.From == null || string.IsNullOrEmpty(email.From.Address))
-                message.From = new Recipient() { EmailAddress = new Microsoft.Graph.EmailAddress() { Name = _settings.DefaultFromDisplayName, Address = _settings.DefaultFromAddress } };
+                message.From = new Recipient() { EmailAddress = new Microsoft.Graph.Models.EmailAddress() { Name = _settings.DefaultFromDisplayName, Address = _settings.DefaultFromAddress } };
             else
-                message.From = new Recipient() { EmailAddress = new Microsoft.Graph.EmailAddress() { Name = email.From.DisplayName, Address = email.From.Address } };
+                message.From = new Recipient() { EmailAddress = new Microsoft.Graph.Models.EmailAddress() { Name = email.From.DisplayName, Address = email.From.Address } };
 
-            message.ToRecipients = email.To.Select(p => new Recipient() { EmailAddress = new Microsoft.Graph.EmailAddress() { Address = p.Address, Name = p.DisplayName } }).ToList();
+            message.ToRecipients = email.To.Select(p => new Recipient() { EmailAddress = new Microsoft.Graph.Models.EmailAddress() { Address = p.Address, Name = p.DisplayName } }).ToList();
 
             _logger.LogDebug("Email message built");
 

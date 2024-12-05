@@ -1,4 +1,5 @@
-﻿using Microsoft.Graph;
+﻿using Microsoft.Kiota.Abstractions;
+using Microsoft.Kiota.Abstractions.Authentication;
 
 namespace Dibk.Ftpb.Api.Email.Provider.GraphApi
 {
@@ -11,7 +12,7 @@ namespace Dibk.Ftpb.Api.Email.Provider.GraphApi
             this._tokenProvider = tokenProvider;
         }
 
-        public async Task AuthenticateRequestAsync(HttpRequestMessage request)
+        public async Task AuthenticateRequestAsync(RequestInformation request, Dictionary<string, object>? additionalAuthenticationContext = null, CancellationToken cancellationToken = default)
         {
             var result = await _tokenProvider.AcquireToken();
             var h = result.CreateAuthorizationHeader();
