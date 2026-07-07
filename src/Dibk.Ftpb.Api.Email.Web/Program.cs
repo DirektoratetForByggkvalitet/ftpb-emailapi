@@ -30,14 +30,9 @@ Logging.ConfigureLogging(app.Configuration);
 app.UseSerilogRequestLogging();
 app.UseHttpsRedirection();
 
-app.UseRouting();
-
 app.UseAuthorization();
 
-app.UseEndpoints(endpoints =>
-{
-    endpoints.MapControllers();
-    endpoints.MapHealthChecks("/health");
-});
+app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();
