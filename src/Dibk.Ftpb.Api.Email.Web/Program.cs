@@ -28,7 +28,8 @@ if (builder.Environment.IsDevelopment())
 }
 Logging.ConfigureLogging(app.Configuration);
 app.UseSerilogRequestLogging();
-app.UseHttpsRedirection();
+// No in-container HTTPS redirect: the container serves plain HTTP on 8080 and TLS is
+// terminated by App Service (httpsOnly). X-Forwarded-* headers preserve the original scheme.
 
 app.UseAuthorization();
 
