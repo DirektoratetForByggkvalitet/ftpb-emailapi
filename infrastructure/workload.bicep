@@ -6,32 +6,34 @@ param privateDnsZoneName string
 param vnetName string
 param subnetName string
 param connectivitySubnet string
-param startCommand string = ''
 
-// Container image settings — the app runs as a container pulled from an existing shared ACR.
+// The app runs as a container pulled from the environment's ACR. The image tag is *not* set here:
+// the Octopus deployment process points the site at a specific tag on every release, so a runbook
+// run must never re-point the site at whatever tag the template happened to be given.
 param acrName string
 param acrResourceGroup string
-param imageName string
-param imageTag string
+
+// Drives the App Configuration label filter, so it must be set explicitly — an unset value silently
+// defaults to Production. The value has to match the labels used in the App Configuration store.
+param aspNetCoreEnvironment string
+
+// Endpoint of the shared Azure App Configuration store; the app loads the rest of its settings from
+// there at startup. Empty means "no App Configuration", and the app falls back to app settings.
+param appConfigurationUri string
+
+// Tenant used by DefaultAzureCredential when reading App Configuration and Key Vault.
+param azureTenantId string
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2021-01-15' existing = {
   name: aspName
   scope: resourceGroup(rgSharedResources)
 }
 
-resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
-  name: acrName
-  scope: resourceGroup(acrResourceGroup)
-}
-
-var linuxFxVersion = 'DOCKER|${containerRegistry.properties.loginServer}/${imageName}:${imageTag}'
-
 var siteConfig = {
-  linuxFxVersion: linuxFxVersion
   // Pull the image using the site's system-assigned managed identity (no registry admin creds).
   acrUseManagedIdentityCreds: true
+  // Liveness only — deliberately not the readiness path, which depends on Entra and Key Vault.
   healthCheckPath: '/health'
-  appCommandLine: startCommand
   appSettings: [
     {
       // Container listens on 8080 (non-root); tell App Service which port to forward to.
@@ -39,12 +41,18 @@ var siteConfig = {
       value: '8080'
     }
     {
-      name: 'WEBSITE_WEBDEPLOY_USE_SCM'
-      value: 'false'
+      name: 'ASPNETCORE_ENVIRONMENT'
+      value: aspNetCoreEnvironment
     }
     {
-      name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
-      value: 'false'
+      name: 'AppConfiguration_Uri'
+      value: appConfigurationUri
+    }
+    {
+      // App Service injects app settings as environment variables, where the section separator is
+      // '__'. A colon would only work on Windows.
+      name: 'Azure__TenantId'
+      value: azureTenantId
     }
   ]
 }
@@ -65,37 +73,13 @@ resource AppServiceApp 'Microsoft.Web/sites@2022-09-01' = {
   }
 }
 
-resource stagingSlot 'Microsoft.Web/sites/slots@2022-09-01' = {
-  name: 'staging'
-  parent: AppServiceApp
-  location: location
-  kind: 'app'
-  identity: {
-    type: 'SystemAssigned'
-  }
-  properties: {
-    serverFarmId: appServicePlan.id
-    siteConfig: siteConfig
-  }
-}
-
-// Both the production site and the staging slot have their own managed identity,
-// so both need AcrPull to pull the image from the shared registry.
+// The site pulls its own image, so its managed identity needs AcrPull on the registry.
 module assignAcrPullApp 'AssignAcrPull.bicep' = {
   name: 'assignAcrPull-app'
   scope: resourceGroup(acrResourceGroup)
   params: {
     acrName: acrName
     principalId: AppServiceApp.identity.principalId
-  }
-}
-
-module assignAcrPullSlot 'AssignAcrPull.bicep' = {
-  name: 'assignAcrPull-slot'
-  scope: resourceGroup(acrResourceGroup)
-  params: {
-    acrName: acrName
-    principalId: stagingSlot.identity.principalId
   }
 }
 

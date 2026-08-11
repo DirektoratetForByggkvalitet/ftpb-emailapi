@@ -14,21 +14,39 @@ definitions:
         script:
           - pipe: atlassian/git-secrets-scan:3.2.0
 
-    # Builds the container image and pushes it to the shared ACR.
-    # Requires the following Bitbucket repository variables:
-    #   ACR_LOGIN_SERVER  e.g. myregistry.azurecr.io
-    #   ACR_USERNAME      ACR token / service-principal id with push rights
-    #   ACR_PASSWORD      (secured) the token/secret
-    #   IMAGE_NAME        e.g. ftpb-email-api
-    - step: &docker-build-push
-        name: Build and push image to ACR
-        services:
-          - docker
+    # Builds the container image inside the environment's ACR (an ACR Task), so no Docker daemon and
+    # no registry credential are needed in Bitbucket. Authentication is Bitbucket OIDC against a
+    # federated credential on an Entra service principal that holds AcrPush on the registry.
+    #
+    # Requires these deployment-scoped Bitbucket variables (one set per environment, since there is
+    # one registry per environment):
+    #   AZURE_CLIENT_ID        app id of the service principal with the federated credential
+    #   AZURE_TENANT_ID
+    #   AZURE_SUBSCRIPTION_ID
+    #   ACR_NAME               registry name, without .azurecr.io
+    #   IMAGE_NAME             e.g. ftpb-email-api
+    - step: &acr-build
+        name: Build image in ACR
+        image: mcr.microsoft.com/azure-cli:latest
+        oidc: true
         script:
-          - export IMAGE_TAG=2.0.$BITBUCKET_BUILD_NUMBER
-          - echo "$ACR_PASSWORD" | docker login "$ACR_LOGIN_SERVER" --username "$ACR_USERNAME" --password-stdin
-          - docker build -t "$ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG" .
-          - docker push "$ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG"
+          - set -euo pipefail
+          - az login --service-principal --username "$AZURE_CLIENT_ID" --tenant "$AZURE_TENANT_ID" --allow-no-subscriptions --federated-token "$BITBUCKET_STEP_OIDC_TOKEN"
+          - az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+          # The image tag is the Octopus release version, so the running image can always be traced
+          # back to a release. Never 'latest' — a restart must not silently change the image.
+          - az acr build --registry "$ACR_NAME" --image "$IMAGE_NAME:$VERSION" .
+
+    # Packages the Bicep templates and creates the Octopus release. The release version equals the
+    # image tag; the deployment process points the web app at that tag.
+    - step: &publish-to-octopus
+        name: Push infrastructure package and create release
+        image: octopusdeploy/octo:6.17.3-alpine
+        script:
+          - octo pack --basePath=infrastructure --id $BITBUCKET_REPO_SLUG-infrastructure --version $VERSION --outFolder ./infra --format zip
+          - octo push --package ./infra/$BITBUCKET_REPO_SLUG-infrastructure.$VERSION.zip --server $OCTOPUS_SERVER --apiKey $OCTOPUS_APIKEY
+          # TODO(FT-1999): confirm the exact Octopus project name before the first release.
+          - octo create-release --project="$OCTOPUS_PROJECT" --version=$VERSION --server $OCTOPUS_SERVER --apiKey $OCTOPUS_APIKEY --channel=$OCTOPUS_CHANNEL
 
 pipelines:
   # Runs for every branch push that doesn't match a pattern under `branches` below
@@ -39,16 +57,62 @@ pipelines:
         - step: *securityScan
 
   branches:
+    develop:
+      - parallel:
+          - step: *build-test
+          - step: *securityScan
+      - step:
+          name: Set version and channel
+          image: atlassian/default-image:latest
+          clone:
+            enabled: false
+          script:
+            - echo "VERSION=2.0.$BITBUCKET_BUILD_NUMBER-beta" >> $BITBUCKET_PIPELINES_VARIABLES_PATH
+            - echo "OCTOPUS_CHANNEL=Dev" >> $BITBUCKET_PIPELINES_VARIABLES_PATH
+          output-variables:
+            - VERSION
+            - OCTOPUS_CHANNEL
+      - step:
+          <<: *acr-build
+          deployment: Dev
+      - step: *publish-to-octopus
+
+    release/rc-*:
+      - parallel:
+          - step: *build-test
+          - step: *securityScan
+      - step:
+          name: Set version and channel
+          image: atlassian/default-image:latest
+          clone:
+            enabled: false
+          script:
+            - echo "VERSION=2.0.$BITBUCKET_BUILD_NUMBER-${BITBUCKET_BRANCH##*/}" >> $BITBUCKET_PIPELINES_VARIABLES_PATH
+            - echo "OCTOPUS_CHANNEL=Test" >> $BITBUCKET_PIPELINES_VARIABLES_PATH
+          output-variables:
+            - VERSION
+            - OCTOPUS_CHANNEL
+      - step:
+          <<: *acr-build
+          deployment: Test
+      - step: *publish-to-octopus
+
     master:
       - parallel:
           - step: *build-test
           - step: *securityScan
-      - step: *docker-build-push
       - step:
-          name: Deploy to Octopus
-          image: octopusdeploy/octo:6.17.3-alpine
+          name: Set version and channel
+          image: atlassian/default-image:latest
+          clone:
+            enabled: false
           script:
-            # Image tag matches the Octopus release version; Octopus passes it to workload.bicep as imageTag.
-            - export VERSION=2.0.$BITBUCKET_BUILD_NUMBER
-            - octo pack --basePath=infrastructure --id $BITBUCKET_REPO_SLUG-infrastructure --version $VERSION --outFolder ./infra --format zip
-            - octo push --package ./infra/$BITBUCKET_REPO_SLUG-infrastructure.$VERSION.zip  --server $OCTOPUS_SERVER --apiKey $OCTOPUS_APIKEY
+            - echo "VERSION=2.0.$BITBUCKET_BUILD_NUMBER" >> $BITBUCKET_PIPELINES_VARIABLES_PATH
+            - echo "OCTOPUS_CHANNEL=Prod" >> $BITBUCKET_PIPELINES_VARIABLES_PATH
+          output-variables:
+            - VERSION
+            - OCTOPUS_CHANNEL
+      - step:
+          <<: *acr-build
+          deployment: Production
+      - step: *publish-to-octopus

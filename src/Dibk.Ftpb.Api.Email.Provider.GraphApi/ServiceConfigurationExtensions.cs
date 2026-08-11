@@ -11,6 +11,9 @@ namespace Dibk.Ftpb.Api.Email.Provider.GraphApi;
 
 public static class ServiceConfigurationExtension
 {
+    /// <summary>Tag for checks that belong on the readiness endpoint, not the liveness one.</summary>
+    public const string ReadyTag = "ready";
+
     private static readonly string[] GraphScopes = ["https://graph.microsoft.com/.default"];
 
     public static void AddGraphApiEmailProvider(this IServiceCollection services, IConfiguration configuration)
@@ -38,9 +41,14 @@ public static class ServiceConfigurationExtension
         services.Configure<GraphApiEmailSettings>(configuration.GetSection(GraphApiEmailSettings.ConfigSection));
     }
 
+    /// <summary>
+    /// Registers the Graph connectivity check under the <c>ready</c> tag. It is deliberately kept out
+    /// of the liveness endpoint: App Service recycles instances on sustained health-check failure, so
+    /// a Key Vault blip or an Entra outage would otherwise restart healthy instances.
+    /// </summary>
     public static IHealthChecksBuilder AddGraphApiHealthCheck(this IHealthChecksBuilder builder)
     {
-        return builder.AddCheck<GraphApiHealthCheck>("GraphApi connection check");
+        return builder.AddCheck<GraphApiHealthCheck>("GraphApi connection check", tags: [ReadyTag]);
     }
 
     private static string GetRequiredConfig(IConfiguration configuration, string key)
