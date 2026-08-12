@@ -4,18 +4,10 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-# Copy the SDK pin and project files first so restore is cached independently of source changes.
-COPY global.json ./
-COPY ["src/Dibk.Ftpb.Api.Email.Web/Dibk.Ftpb.Api.Email.Web.csproj", "Dibk.Ftpb.Api.Email.Web/"]
-COPY ["src/Dibk.Ftpb.Api.Email.Provider.GraphApi/Dibk.Ftpb.Api.Email.Provider.GraphApi.csproj", "Dibk.Ftpb.Api.Email.Provider.GraphApi/"]
-COPY ["src/Dibk.Ftpb.Api.Email.Interfaces/Dibk.Ftpb.Api.Email.Interfaces.csproj", "Dibk.Ftpb.Api.Email.Interfaces/"]
-COPY ["src/Dibk.Ftpb.Api.Email.Models/Dibk.Ftpb.Api.Email.Models.csproj", "Dibk.Ftpb.Api.Email.Models/"]
-RUN dotnet restore "Dibk.Ftpb.Api.Email.Web/Dibk.Ftpb.Api.Email.Web.csproj"
+COPY . .
 
-# Copy the remaining source and publish the Web host (which pulls in the referenced projects).
-COPY src/ ./
-RUN dotnet publish "Dibk.Ftpb.Api.Email.Web/Dibk.Ftpb.Api.Email.Web.csproj" \
-    -c Release -o /app/publish --no-restore /p:UseAppHost=false
+RUN dotnet publish "src/Dibk.Ftpb.Api.Email.Web/Dibk.Ftpb.Api.Email.Web.csproj" \
+    -c Release -o /app/publish /p:UseAppHost=false
 
 # ---- Runtime stage ----
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final

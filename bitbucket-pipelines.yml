@@ -58,9 +58,7 @@ pipelines:
 
   branches:
     develop:
-      - parallel:
-          - step: *build-test
-          - step: *securityScan
+      - step: *securityScan
       - step:
           name: Set version and channel
           image: atlassian/default-image:latest
@@ -78,9 +76,7 @@ pipelines:
       - step: *publish-to-octopus
 
     release/rc-*:
-      - parallel:
-          - step: *build-test
-          - step: *securityScan
+      - step: *securityScan
       - step:
           name: Set version and channel
           image: atlassian/default-image:latest
@@ -98,9 +94,7 @@ pipelines:
       - step: *publish-to-octopus
 
     master:
-      - parallel:
-          - step: *build-test
-          - step: *securityScan
+      - step: *securityScan
       - step:
           name: Set version and channel
           image: atlassian/default-image:latest
