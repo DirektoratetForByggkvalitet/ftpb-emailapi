@@ -1,7 +1,5 @@
-using System.Security.Cryptography.X509Certificates;
 using Azure.Core;
 using Azure.Identity;
-using Azure.Security.KeyVault.Certificates;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Graph;
@@ -16,22 +14,28 @@ public static class ServiceConfigurationExtension
 
     private static readonly string[] GraphScopes = ["https://graph.microsoft.com/.default"];
 
+    /// <summary>Audience Entra requires on a managed-identity token used as a client assertion.</summary>
+    private const string TokenExchangeAudience = "api://AzureADTokenExchange";
+
     public static void AddGraphApiEmailProvider(this IServiceCollection services, IConfiguration configuration)
     {
-        // Authenticate to Microsoft Graph with the client-credentials flow using a certificate.
-        // The certificate is loaded from Key Vault via the app's managed identity (DefaultAzureCredential).
-        // Registered as a singleton so the Key Vault download happens once, on first use.
+        // Authenticate to Microsoft Graph as the app registration
+
+        // Registered as a singleton because both credentials cache tokens internally.
         services.AddSingleton<TokenCredential>(_ =>
         {
             var tenantId = GetRequiredConfig(configuration, "GraphApiAuth:TenantId");
             var clientId = GetRequiredConfig(configuration, "GraphApiAuth:ClientId");
-            var keyVaultUri = GetRequiredConfig(configuration, "GraphApiAuth:KeyVaultUri");
-            var certificateName = GetRequiredConfig(configuration, "GraphApiAuth:CertificateName");
+            var managedIdentityClientId = GetRequiredConfig(configuration, "GraphApiAuth:ManagedIdentityClientId");
 
-            var certificateClient = new CertificateClient(new Uri(keyVaultUri), new DefaultAzureCredential());
-            X509Certificate2 certificate = certificateClient.DownloadCertificate(certificateName);
+            var managedIdentity = new ManagedIdentityCredential(
+                ManagedIdentityId.FromUserAssignedClientId(managedIdentityClientId));
 
-            return new ClientCertificateCredential(tenantId, clientId, certificate);
+            var tokenExchangeContext = new TokenRequestContext([$"{TokenExchangeAudience}/.default"]);
+
+            return new ClientAssertionCredential(tenantId, clientId, async cancellationToken =>
+                (await managedIdentity.GetTokenAsync(tokenExchangeContext, cancellationToken)
+                                      .ConfigureAwait(false)).Token);
         });
 
         // GraphServiceClient is thread-safe and meant to be reused, so register it as a singleton.
@@ -42,9 +46,7 @@ public static class ServiceConfigurationExtension
     }
 
     /// <summary>
-    /// Registers the Graph connectivity check under the <c>ready</c> tag. It is deliberately kept out
-    /// of the liveness endpoint: App Service recycles instances on sustained health-check failure, so
-    /// a Key Vault blip or an Entra outage would otherwise restart healthy instances.
+    /// Registers the Graph connectivity check under the <c>ready</c> tag.
     /// </summary>
     public static IHealthChecksBuilder AddGraphApiHealthCheck(this IHealthChecksBuilder builder)
     {

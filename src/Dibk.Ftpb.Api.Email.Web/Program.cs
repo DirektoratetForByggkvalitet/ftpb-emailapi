@@ -32,18 +32,13 @@ if (builder.Environment.IsDevelopment())
 }
 Logging.ConfigureLogging(app.Configuration);
 app.UseSerilogRequestLogging();
-// No in-container HTTPS redirect: the container serves plain HTTP on 8080 and TLS is
-// terminated by App Service (httpsOnly). X-Forwarded-* headers preserve the original scheme.
 
 app.UseAuthorization();
 
 app.MapControllers();
 
-// Liveness: is the process up? No dependencies, because App Service's health check recycles
-// instances on sustained failure — this is the path configured as healthCheckPath.
 app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = _ => false });
 
-// Readiness: can we actually reach Microsoft Graph? For monitoring and manual verification.
 app.MapHealthChecks("/health/ready", new HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains(ServiceConfigurationExtension.ReadyTag)
