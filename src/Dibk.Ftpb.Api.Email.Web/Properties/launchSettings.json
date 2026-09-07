@@ -5,7 +5,9 @@
       "commandName": "Project",
       "applicationUrl": "https://localhost:5020;http://localhost:5021",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "AZURE_TOKEN_CREDENTIALS": "dev",
+        "ELASTIC_APM_ENABLED": "false"
       }
     }
   }

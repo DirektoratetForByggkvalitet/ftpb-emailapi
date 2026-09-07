@@ -5,7 +5,6 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Most settings come from the shared App Configuration store; app settings still override.
 builder.Configuration.AddEmailApiConfiguration(builder.Environment.EnvironmentName);
 
 // Add services to the container.

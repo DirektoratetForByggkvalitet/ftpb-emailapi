@@ -14,17 +14,7 @@ definitions:
         script:
           - pipe: atlassian/git-secrets-scan:3.2.0
 
-    # Builds the container image inside the environment's ACR (an ACR Task), so no Docker daemon and
-    # no registry credential are needed in Bitbucket. Authentication is Bitbucket OIDC against a
-    # federated credential on an Entra service principal that holds AcrPush on the registry.
-    #
-    # Requires these deployment-scoped Bitbucket variables (one set per environment, since there is
-    # one registry per environment):
-    #   AZURE_CLIENT_ID        app id of the service principal with the federated credential
-    #   AZURE_TENANT_ID
-    #   AZURE_SUBSCRIPTION_ID
-    #   ACR_NAME               registry name, without .azurecr.io
-    #   IMAGE_NAME             e.g. ftpb-email-api
+
     - step: &acr-build
         name: Build image in ACR
         image: mcr.microsoft.com/azure-cli:latest
@@ -33,24 +23,18 @@ definitions:
           - set -euo pipefail
           - az login --service-principal --username "$AZURE_CLIENT_ID" --tenant "$AZURE_TENANT_ID" --allow-no-subscriptions --federated-token "$BITBUCKET_STEP_OIDC_TOKEN"
           - az account set --subscription "$AZURE_SUBSCRIPTION_ID"
-          # The image tag is the Octopus release version, so the running image can always be traced
-          # back to a release. Never 'latest' — a restart must not silently change the image.
           - az acr build --registry "$ACR_NAME" --image "$IMAGE_NAME:$VERSION" .
 
-    # Packages the Bicep templates and creates the Octopus release. The release version equals the
-    # image tag; the deployment process points the web app at that tag.
+
     - step: &publish-to-octopus
         name: Push infrastructure package and create release
         image: octopusdeploy/octo:6.17.3-alpine
         script:
           - octo pack --basePath=infrastructure --id $BITBUCKET_REPO_SLUG-infrastructure --version $VERSION --outFolder ./infra --format zip
           - octo push --package ./infra/$BITBUCKET_REPO_SLUG-infrastructure.$VERSION.zip --server $OCTOPUS_SERVER --apiKey $OCTOPUS_APIKEY
-          # TODO(FT-1999): confirm the exact Octopus project name before the first release.
           - octo create-release --project="$OCTOPUS_PROJECT" --version=$VERSION --server $OCTOPUS_SERVER --apiKey $OCTOPUS_APIKEY --channel=$OCTOPUS_CHANNEL
 
 pipelines:
-  # Runs for every branch push that doesn't match a pattern under `branches` below
-  # (e.g. feature/*, bugfix/*, any branch) — a build-only gate.
   default:
     - parallel:
         - step: *build-test

@@ -12,11 +12,40 @@ param acrResourceGroup string
 
 param aspNetCoreEnvironment string
 
-param appConfigurationUri string
+param appConfigurationUri string = ''
 
-param azureTenantId string
+param azureTenantId string = ''
 
 param managedIdentityName string = 'uid-${appName}'
+
+// Graph authentication. Today the app uses a client secret, as it always has. 
+// TODO: When the federated identity credential is in place on the app registration, set this to true: the app then
+// authenticates as that app registration via the managed identity, and the secret is no longer read.
+// Nothing else changes, and graphApiClientSecret can be left empty from then on.
+param useFederatedIdentityCredential bool = false
+
+@secure()
+param graphApiClientSecret string = ''
+
+param graphApiTenantId string
+param graphApiClientId string
+
+param emailUserPrincipalName string
+param emailDefaultFromAddress string
+param emailDefaultFromDisplayName string
+
+param serilogConnectionUrl string
+param serilogUsername string
+@secure()
+param serilogPassword string
+param serilogIndexFormat string = 'logs-emailservice'
+
+param elasticApmServerUrl string
+@secure()
+param elasticApmSecretToken string
+param elasticApmEnvironment string = aspNetCoreEnvironment
+
+param loggingLogLevelDefault string = 'Debug'
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2021-01-15' existing = {
   name: aspName
@@ -28,11 +57,25 @@ resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-
   location: location
 }
 
+var graphAuthSettings = useFederatedIdentityCredential
+  ? [
+      {
+        name: 'GraphApiAuth__ManagedIdentityClientId'
+        value: managedIdentity.properties.clientId
+      }
+    ]
+  : [
+      {
+        name: 'GraphApiAuth__ClientSecret'
+        value: graphApiClientSecret
+      }
+    ]
+
 var siteConfig = {
   acrUseManagedIdentityCreds: true
   acrUserManagedIdentityID: managedIdentity.properties.clientId
   healthCheckPath: '/health'
-  appSettings: [
+  appSettings: concat([
     {
       name: 'WEBSITES_PORT'
       value: '8080'
@@ -54,10 +97,58 @@ var siteConfig = {
       value: managedIdentity.properties.clientId
     }
     {
-      name: 'GraphApiAuth__ManagedIdentityClientId'
-      value: managedIdentity.properties.clientId
+      name: 'GraphApiAuth__TenantId'
+      value: graphApiTenantId
     }
-  ]
+    {
+      name: 'GraphApiAuth__ClientId'
+      value: graphApiClientId
+    }
+    {
+      name: 'GraphApiEmailSettings__UserPrincipalName'
+      value: emailUserPrincipalName
+    }
+    {
+      name: 'GraphApiEmailSettings__DefaultFromAddress'
+      value: emailDefaultFromAddress
+    }
+    {
+      name: 'GraphApiEmailSettings__DefaultFromDisplayName'
+      value: emailDefaultFromDisplayName
+    }
+    {
+      name: 'Serilog__ConnectionUrl'
+      value: serilogConnectionUrl
+    }
+    {
+      name: 'Serilog__Username'
+      value: serilogUsername
+    }
+    {
+      name: 'Serilog__Password'
+      value: serilogPassword
+    }
+    {
+      name: 'Serilog__IndexFormat'
+      value: serilogIndexFormat
+    }
+    {
+      name: 'ElasticApm__ServerUrl'
+      value: elasticApmServerUrl
+    }
+    {
+      name: 'ElasticApm__SecretToken'
+      value: elasticApmSecretToken
+    }
+    {
+      name: 'ElasticApm__Environment'
+      value: elasticApmEnvironment
+    }
+    {
+      name: 'Logging__LogLevel__Default'
+      value: loggingLogLevelDefault
+    }
+  ], graphAuthSettings)
 }
 
 resource AppServiceApp 'Microsoft.Web/sites@2022-09-01' = {
