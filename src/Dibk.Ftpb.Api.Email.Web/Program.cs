@@ -1,8 +1,11 @@
 using Dibk.Ftpb.Api.Email.Provider.GraphApi;
 using Dibk.Ftpb.Email.Api;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Configuration.AddEmailApiConfiguration(builder.Environment.EnvironmentName);
 
 // Add services to the container.
 builder.Services.AddHealthChecks().AddGraphApiHealthCheck();
@@ -28,16 +31,16 @@ if (builder.Environment.IsDevelopment())
 }
 Logging.ConfigureLogging(app.Configuration);
 app.UseSerilogRequestLogging();
-app.UseHttpsRedirection();
-
-app.UseRouting();
 
 app.UseAuthorization();
 
-app.UseEndpoints(endpoints =>
+app.MapControllers();
+
+app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = _ => false });
+
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
 {
-    endpoints.MapControllers();
-    endpoints.MapHealthChecks("/health");
+    Predicate = check => check.Tags.Contains(ServiceConfigurationExtension.ReadyTag)
 });
 
 app.Run();

@@ -1,30 +1,96 @@
 definitions:
   steps:
     - step: &build-test
-        image: mcr.microsoft.com/dotnet/sdk:8.0
+        image: mcr.microsoft.com/dotnet/sdk:10.0
         caches:
           - dotnetcore
         script:
           - dotnet restore src/Dibk.Ftpb.Api.Email.sln
           - dotnet build-server shutdown
-          - dotnet build src/Dibk.Ftpb.Api.Email.Web/Dibk.Ftpb.Api.Email.Web.csproj -c Release -f net8.0 --no-restore
-          - dotnet publish src/Dibk.Ftpb.Api.Email.Web/Dibk.Ftpb.Api.Email.Web.csproj -c Release -f net8.0 -o publish --no-build -v detailed
-        artifacts:
-          - publish/**
+          - dotnet build src/Dibk.Ftpb.Api.Email.Web/Dibk.Ftpb.Api.Email.Web.csproj -c Release -f net10.0 --no-restore
+
+    - step: &securityScan
+        name: Security Scan
+        script:
+          - pipe: atlassian/git-secrets-scan:3.2.0
+
+
+    - step: &acr-build
+        name: Build image in ACR
+        image: mcr.microsoft.com/azure-cli:latest
+        oidc: true
+        script:
+          - set -euo pipefail
+          - az login --service-principal --username "$AZURE_CLIENT_ID" --tenant "$AZURE_TENANT_ID" --allow-no-subscriptions --federated-token "$BITBUCKET_STEP_OIDC_TOKEN"
+          - az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+          - az acr build --registry "$ACR_NAME" --image "$IMAGE_NAME:$VERSION" .
+
+
+    - step: &publish-to-octopus
+        name: Push infrastructure package and create release
+        image: octopusdeploy/octo:6.17.3-alpine
+        script:
+          - octo pack --basePath=infrastructure --id $BITBUCKET_REPO_SLUG-infrastructure --version $VERSION --outFolder ./infra --format zip
+          - octo push --package ./infra/$BITBUCKET_REPO_SLUG-infrastructure.$VERSION.zip --server $OCTOPUS_SERVER --apiKey $OCTOPUS_APIKEY
+          - octo create-release --project="$OCTOPUS_PROJECT" --version=$VERSION --server $OCTOPUS_SERVER --apiKey $OCTOPUS_APIKEY --channel=$OCTOPUS_CHANNEL
 
 pipelines:
-  branches:
-    master:
-      - step: *build-test
-      - step:
-          name: Deploy to Octopus
-          image: octopusdeploy/octo:6.17.3-alpine
-          script:
-            - export VERSION=2.0.$BITBUCKET_BUILD_NUMBER
-            - octo pack --basePath=infrastructure --id $BITBUCKET_REPO_SLUG-infrastructure --version $VERSION --outFolder ./infra --format zip
-            - octo push --package ./infra/$BITBUCKET_REPO_SLUG-infrastructure.$VERSION.zip  --server $OCTOPUS_SERVER --apiKey $OCTOPUS_APIKEY
-            - octo pack --basePath=publish --id $BITBUCKET_REPO_SLUG --version $VERSION --outFolder ./out --format zip
-            - octo push --package ./out/$BITBUCKET_REPO_SLUG.$VERSION.zip  --server $OCTOPUS_SERVER --apiKey $OCTOPUS_APIKEY
+  default:
+    - parallel:
+        - step: *build-test
+        - step: *securityScan
 
-    feature/*:
-      - step: *build-test
+  branches:
+    develop:
+      - step: *securityScan
+      - step:
+          name: Set version and channel
+          image: atlassian/default-image:latest
+          clone:
+            enabled: false
+          script:
+            - echo "VERSION=2.0.$BITBUCKET_BUILD_NUMBER-beta" >> $BITBUCKET_PIPELINES_VARIABLES_PATH
+            - echo "OCTOPUS_CHANNEL=Dev" >> $BITBUCKET_PIPELINES_VARIABLES_PATH
+          output-variables:
+            - VERSION
+            - OCTOPUS_CHANNEL
+      - step:
+          <<: *acr-build
+          deployment: Dev
+      - step: *publish-to-octopus
+
+    release/rc-*:
+      - step: *securityScan
+      - step:
+          name: Set version and channel
+          image: atlassian/default-image:latest
+          clone:
+            enabled: false
+          script:
+            - echo "VERSION=2.0.$BITBUCKET_BUILD_NUMBER-${BITBUCKET_BRANCH##*/}" >> $BITBUCKET_PIPELINES_VARIABLES_PATH
+            - echo "OCTOPUS_CHANNEL=Test" >> $BITBUCKET_PIPELINES_VARIABLES_PATH
+          output-variables:
+            - VERSION
+            - OCTOPUS_CHANNEL
+      - step:
+          <<: *acr-build
+          deployment: Test
+      - step: *publish-to-octopus
+
+    master:
+      - step: *securityScan
+      - step:
+          name: Set version and channel
+          image: atlassian/default-image:latest
+          clone:
+            enabled: false
+          script:
+            - echo "VERSION=2.0.$BITBUCKET_BUILD_NUMBER" >> $BITBUCKET_PIPELINES_VARIABLES_PATH
+            - echo "OCTOPUS_CHANNEL=Prod" >> $BITBUCKET_PIPELINES_VARIABLES_PATH
+          output-variables:
+            - VERSION
+            - OCTOPUS_CHANNEL
+      - step:
+          <<: *acr-build
+          deployment: Production
+      - step: *publish-to-octopus

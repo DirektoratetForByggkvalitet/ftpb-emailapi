@@ -5,20 +5,19 @@ using Microsoft.Extensions.Options;
 using Microsoft.Graph;
 using Microsoft.Graph.Models;
 using Microsoft.Graph.Users.Item.SendMail;
-using Microsoft.Kiota.Abstractions.Authentication;
 
 namespace Dibk.Ftpb.Api.Email.Provider.GraphApi;
 
 public partial class GraphApiEmailProvider : IFtpbEmailProvider
 {
     private readonly ILogger<GraphApiEmailProvider> _logger;
-    private readonly IAuthenticationProvider _clientCredentialsAuthProvider;
+    private readonly GraphServiceClient _graphClient;
     private readonly GraphApiEmailSettings _settings;
 
-    public GraphApiEmailProvider(ILogger<GraphApiEmailProvider> logger, IOptions<GraphApiEmailSettings> options, IAuthenticationProvider clientCredentialsAuthProvider)
+    public GraphApiEmailProvider(ILogger<GraphApiEmailProvider> logger, IOptions<GraphApiEmailSettings> options, GraphServiceClient graphClient)
     {
         _logger = logger;
-        _clientCredentialsAuthProvider = clientCredentialsAuthProvider;
+        _graphClient = graphClient;
         _settings = options.Value;
     }
 
@@ -26,7 +25,6 @@ public partial class GraphApiEmailProvider : IFtpbEmailProvider
     {
         Message message = BuildMessage(email);
 
-        GraphServiceClient client = new GraphServiceClient(_clientCredentialsAuthProvider);
         var saveToSentItems = false;
         try
         {
@@ -36,7 +34,7 @@ public partial class GraphApiEmailProvider : IFtpbEmailProvider
                 SaveToSentItems = saveToSentItems
             };
 
-            await client.Users[_settings.UserPrincipalName]
+            await _graphClient.Users[_settings.UserPrincipalName]
                 .SendMail.PostAsync(requestBody);
             _logger.LogInformation("Email sendt");
         }
