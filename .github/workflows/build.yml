@@ -1,5 +1,8 @@
 name: Build and Push Container Images
-run-name: Build and push - ${{ inputs.environment || 'dev' }} - ${{ github.ref_name }}
+run-name: Build and push - ${{ github.ref_name }}
+
+# Gitflow: develop -> dev, release/* and hotfix/* -> test, main -> prod.
+# feature/* branches and pull requests are built, but no image is pushed.
 
 permissions:
   id-token: write
@@ -7,17 +10,14 @@ permissions:
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - develop
+      - 'release/**'
+      - 'hotfix/**'
+      - 'feature/**'
   pull_request:
   workflow_dispatch:
-    inputs:
-      environment:
-        type: choice
-        description: Target environment
-        options:
-          - dev
-          - test
-          - prod
 
 jobs:
   build:
@@ -39,21 +39,31 @@ jobs:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     outputs:
-      registry: ${{ steps.registry.outputs.name }}
+      environment: ${{ steps.target.outputs.environment }}
+      registry: ${{ steps.target.outputs.registry }}
+      version: ${{ steps.target.outputs.version }}
     steps:
-      - name: Set registry name
-        id: registry
+      - name: Set environment, registry and version
+        id: target
+        env:
+          BRANCH: ${{ github.ref_name }}
+          RUN_NUMBER: ${{ github.run_number }}
         run: |
-          case "${{ inputs.environment || 'dev' }}" in
-            dev)  echo "name=crdriftdev" >> $GITHUB_OUTPUT ;;
-            test) echo "name=crdrifttest" >> $GITHUB_OUTPUT ;;
-            prod) echo "name=crdriftprod" >> $GITHUB_OUTPUT ;;
+          case "$BRANCH" in
+            main)                env=prod; version="2.0.$RUN_NUMBER" ;;
+            release/*|hotfix/*)  env=test; version="2.0.$RUN_NUMBER-rc" ;;
+            develop)             env=dev;  version="2.0.$RUN_NUMBER-beta" ;;
+            *)                   exit 0 ;;
           esac
+          echo "environment=$env" >> $GITHUB_OUTPUT
+          echo "registry=crdrift$env" >> $GITHUB_OUTPUT
+          echo "version=$version" >> $GITHUB_OUTPUT
 
   build-email-api:
     needs: [build, setup]
+    if: needs.setup.outputs.environment != ''
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment || 'dev' }}
+    environment: ${{ needs.setup.outputs.environment }}
     steps:
       - uses: actions/checkout@v7
 
@@ -70,7 +80,7 @@ jobs:
       # Image tag = release version, never 'latest' (see docs/FT-1999-status-drift.md).
       - name: Build and push email api
         run: |
-          IMAGE=${{ needs.setup.outputs.registry }}.azurecr.io/ftpb-email-api:2.0.${{ github.run_number }}
+          IMAGE=${{ needs.setup.outputs.registry }}.azurecr.io/ftpb-email-api:${{ needs.setup.outputs.version }}
           docker build -f Dockerfile -t $IMAGE .
           docker push $IMAGE
           echo "Pushed \`$IMAGE\`" >> $GITHUB_STEP_SUMMARY
