@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Dibk.Ftpb.Api.Email.Interfaces</RootNamespace>
+    <AssemblyName>Dibk.Ftpb.Api.Email.Interfaces</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Dibk.Ftpb.Api.Email.Models\Dibk.Ftpb.Api.Email.Models.csproj" />
+  </ItemGroup>
+</Project>

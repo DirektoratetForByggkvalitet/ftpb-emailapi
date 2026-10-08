@@ -1,0 +1,102 @@
+﻿using Dibk.Ftpb.Api.Email.Interfaces;
+using Dibk.Ftpb.Api.Email.Models;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Microsoft.Graph;
+using Microsoft.Graph.Models;
+using Microsoft.Graph.Users.Item.SendMail;
+
+namespace Dibk.Ftpb.Api.Email.Provider.GraphApi;
+
+public partial class GraphApiEmailProvider : IFtpbEmailProvider
+{
+    private readonly ILogger<GraphApiEmailProvider> _logger;
+    private readonly GraphServiceClient _graphClient;
+    private readonly GraphApiEmailSettings _settings;
+
+    public GraphApiEmailProvider(ILogger<GraphApiEmailProvider> logger, IOptions<GraphApiEmailSettings> options, GraphServiceClient graphClient)
+    {
+        _logger = logger;
+        _graphClient = graphClient;
+        _settings = options.Value;
+    }
+
+    public async Task SendEmail(EmailMessage email)
+    {
+        Message message = BuildMessage(email);
+
+        var saveToSentItems = false;
+        try
+        {
+            var requestBody = new SendMailPostRequestBody()
+            {
+                Message = message,
+                SaveToSentItems = saveToSentItems
+            };
+
+            await _graphClient.Users[_settings.UserPrincipalName]
+                .SendMail.PostAsync(requestBody);
+            _logger.LogInformation("Email sendt");
+        }
+        //catch (Microsoft.Graph.ServiceException svcEx)
+        //{
+        //    var s = svcEx.ToString();
+        //    var errorMessage = svcEx.Error.ToString();
+
+        //    _logger.LogError(svcEx, $"{s} - {errorMessage}");
+        //    throw;
+        //}
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception occurred when sending message");
+            throw;
+        }
+    }
+
+    private Message BuildMessage(EmailMessage email)
+    {
+        var message = new Message();
+
+        message.Subject = email.Subject;
+
+        ItemBody? body = null;
+
+        if (string.IsNullOrEmpty(email.HtmlBody))
+            body = new ItemBody()
+            {
+                ContentType = BodyType.Text,
+                Content = email.Body
+            };
+        else
+            body = new ItemBody()
+            {
+                ContentType = BodyType.Html,
+                Content = email.HtmlBody
+            };
+
+        message.Body = body;
+
+        if (email.Attachments?.Count() > 0)
+        {
+            var attachments = new List<Attachment>();
+
+            foreach (var attachment in email.Attachments)
+            {
+                attachments.Add(new FileAttachment() { ContentBytes = attachment.Content, Name = attachment.FileName });
+            }
+
+            message.Attachments = attachments;
+        }
+
+        if (email.From == null || string.IsNullOrEmpty(email.From.Address))
+            message.From = new Recipient() { EmailAddress = new Microsoft.Graph.Models.EmailAddress() { Name = _settings.DefaultFromDisplayName, Address = _settings.DefaultFromAddress } };
+        else
+            message.From = new Recipient() { EmailAddress = new Microsoft.Graph.Models.EmailAddress() { Name = email.From.DisplayName, Address = email.From.Address } };
+
+        message.ToRecipients = email.To.Select(p => new Recipient() { EmailAddress = new Microsoft.Graph.Models.EmailAddress() { Address = p.Address, Name = p.DisplayName } }).ToList();
+
+        _logger.LogDebug("Email message built");
+
+        return message;
+    }
+}

@@ -1,0 +1,28 @@
+# Build artifacts
+**/bin/
+**/obj/
+**/publish/
+artifacts/
+
+# IDE / VS
+**/.vs/
+**/.vscode/
+**/*.user
+**/*.suo
+
+# Git / CI / docs — not needed in the image build context
+.git/
+.gitignore
+.github/
+bitbucket-pipelines.yml
+infrastructure/
+docs/
+README.md
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Local secrets / env (should never be in the image)
+**/*.env
+**/appsettings.*.Local.json
