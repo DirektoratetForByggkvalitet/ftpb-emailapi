@@ -1,0 +1,76 @@
+name: Build and Push Container Images
+run-name: Build and push - ${{ inputs.environment || 'dev' }} - ${{ github.ref_name }}
+
+permissions:
+  id-token: write
+  contents: read
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        description: Target environment
+        options:
+          - dev
+          - test
+          - prod
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build
+        run: |
+          dotnet restore src/Dibk.Ftpb.Api.Email.sln
+          dotnet build src/Dibk.Ftpb.Api.Email.sln -c Release --no-restore
+
+  setup:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      registry: ${{ steps.registry.outputs.name }}
+    steps:
+      - name: Set registry name
+        id: registry
+        run: |
+          case "${{ inputs.environment || 'dev' }}" in
+            dev)  echo "name=crdriftdev" >> $GITHUB_OUTPUT ;;
+            test) echo "name=crdrifttest" >> $GITHUB_OUTPUT ;;
+            prod) echo "name=crdriftprod" >> $GITHUB_OUTPUT ;;
+          esac
+
+  build-email-api:
+    needs: [build, setup]
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'dev' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Azure login
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      - name: ACR login
+        run: az acr login --name ${{ needs.setup.outputs.registry }}
+
+      # Image tag = release version, never 'latest' (see docs/FT-1999-status-drift.md).
+      - name: Build and push email api
+        run: |
+          IMAGE=${{ needs.setup.outputs.registry }}.azurecr.io/ftpb-email-api:2.0.${{ github.run_number }}
+          docker build -f Dockerfile -t $IMAGE .
+          docker push $IMAGE
+          echo "Pushed \`$IMAGE\`" >> $GITHUB_STEP_SUMMARY
