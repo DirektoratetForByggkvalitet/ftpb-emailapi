@@ -56,7 +56,7 @@ jobs:
             *)                   exit 0 ;;
           esac
           echo "environment=$env" >> $GITHUB_OUTPUT
-          echo "registry=crdrift$env" >> $GITHUB_OUTPUT
+          echo "registry=cremailapi$env" >> $GITHUB_OUTPUT
           echo "version=$version" >> $GITHUB_OUTPUT
 
   build-email-api:
