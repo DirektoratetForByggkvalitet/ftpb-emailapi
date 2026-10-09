@@ -83,6 +83,14 @@ jobs:
           docker buildx imagetools create --tag $REPO:latest $REPO:$VERSION
           echo "Tagged \`$REPO:$VERSION\` as \`latest\`" >> $GITHUB_STEP_SUMMARY
 
+      - name: Notify Slack
+        if: always()
+        uses: DirektoratetForByggKvalitet/actions-notify-slack@v1
+        with:
+          webhook-url: ${{ secrets.ARKITEKTUM_SLACK_CICD_WEBHOOK_URL }}
+          version: ${{ inputs.version }}
+          environment: ${{ inputs.environment }}
+
   cleanup:
     needs: deploy
     runs-on: ubuntu-latest
