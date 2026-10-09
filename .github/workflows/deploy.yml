@@ -85,7 +85,7 @@ jobs:
 
       - name: Notify Slack
         if: always()
-        uses: DirektoratetForByggKvalitet/actions-notify-slack@v1
+        uses: DirektoratetForByggKvalitet/actions-notify-slack@v2
         with:
           webhook-url: ${{ secrets.ARKITEKTUM_SLACK_CICD_WEBHOOK_URL }}
           version: ${{ inputs.version }}
