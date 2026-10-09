@@ -1,0 +1,122 @@
+name: Deploy Container App
+run-name: Deploy ${{ inputs.version }} to ${{ inputs.environment }}
+
+# dev and test are deployed by the build workflow (workflow_call) after a successful push.
+# prod is deployed manually from main, with the version built on main (2.0.N).
+# The app is deployed with the version tag. 'latest' is moved to the same image as a
+# fallback for infrastructure jobs, and only the 5 newest version tags are kept.
+
+permissions:
+  id-token: write
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        type: choice
+        options:
+          - dev
+          - test
+          - prod
+      version:
+        description: Image tag to deploy, e.g. 2.0.42
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      ENVIRONMENT: ${{ inputs.environment }}
+      VERSION: ${{ inputs.version }}
+      REGISTRY: cremailapi${{ inputs.environment }}
+      CONTAINER_APP: ca-emailapi-api-${{ inputs.environment }}
+      RESOURCE_GROUP: rg-emailapi-${{ inputs.environment }}
+    steps:
+      - name: Only deploy prod from main
+        if: inputs.environment == 'prod' && github.ref_name != 'main'
+        run: |
+          echo "::error::prod can only be deployed from main (got $GITHUB_REF_NAME)"
+          exit 1
+
+      - name: Azure login
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      - name: Check image exists
+        run: az acr repository show --name $REGISTRY --image ftpb-email-api:$VERSION --output none
+
+      - name: Deploy container app
+        run: |
+          az extension add --name containerapp --upgrade --only-show-errors
+          IMAGE=$REGISTRY.azurecr.io/ftpb-email-api:$VERSION
+          az containerapp update \
+            --name $CONTAINER_APP \
+            --resource-group $RESOURCE_GROUP \
+            --image $IMAGE \
+            --output none
+          echo "Deployed \`$IMAGE\` to \`$CONTAINER_APP\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Tag image as latest
+        run: |
+          az acr login --name $REGISTRY
+          REPO=$REGISTRY.azurecr.io/ftpb-email-api
+          docker buildx imagetools create --tag $REPO:latest $REPO:$VERSION
+          echo "Tagged \`$REPO:$VERSION\` as \`latest\`" >> $GITHUB_STEP_SUMMARY
+
+  cleanup:
+    needs: deploy
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      REGISTRY: cremailapi${{ inputs.environment }}
+      REPOSITORY: ftpb-email-api
+      KEEP: 5
+    steps:
+      - name: Azure login
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      # Keeps 'latest' and the $KEEP newest version tags. Older images are deleted by
+      # digest, unless the digest is shared with a kept tag, in which case only the tag goes.
+      - name: Delete old image tags
+        run: |
+          tags=$(az acr repository show-tags --name $REGISTRY --repository $REPOSITORY \
+            --detail --orderby time_desc --query "[].{name:name, digest:digest}" --output json)
+          kept=$(jq --argjson keep $KEEP '[.[] | select(.name == "latest")] + ([.[] | select(.name != "latest")][:$keep])' <<< "$tags")
+          old=$(jq --argjson keep $KEEP '[.[] | select(.name != "latest")][$keep:]' <<< "$tags")
+          kept_digests=$(jq '[.[].digest] | unique' <<< "$kept")
+
+          jq -r --argjson kept "$kept_digests" '.[] | select(.digest as $d | $kept | index($d)) | .name' <<< "$old" |
+          while read -r tag; do
+            echo "Untagging $REPOSITORY:$tag (image still in use by a kept tag)"
+            az acr repository untag --name $REGISTRY --image $REPOSITORY:$tag
+          done
+
+          jq -r --argjson kept "$kept_digests" '[.[] | select(.digest as $d | $kept | index($d) | not) | .digest] | unique | .[]' <<< "$old" |
+          while read -r digest; do
+            echo "Deleting $REPOSITORY@$digest"
+            az acr repository delete --name $REGISTRY --image $REPOSITORY@$digest --yes --output none
+          done
